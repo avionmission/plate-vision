@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 import cv2
+import easyocr
 import numpy as np
 import streamlit as st
 from PIL import Image
@@ -196,8 +197,8 @@ div[data-testid="stAlert"] {
 @st.cache_resource
 def load_models():
     plate_model = YOLO("models/numberplate.pt")
-    char_model = YOLO("models/alphanum.pt")
-    return plate_model, char_model
+    char_reader = easyocr.Reader(['en'], gpu=True, verbose=False)
+    return plate_model, char_reader
 
 
 # ─── Core Logic ──────────────────────────────────────────────────────────────────
@@ -215,21 +216,20 @@ def detect_plate_region(plate_model, image_bgr):
     return plates
 
 
-def read_plate_text(char_model, cropped_plate):
+def read_plate_text(char_reader, cropped_plate):
     """Returns plate string from cropped plate image."""
     upscaled = cv2.resize(
         cropped_plate, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC
     )
-    results = char_model(upscaled, verbose=False)[0]
+    gray = cv2.cvtColor(upscaled, cv2.COLOR_BGR2GRAY)
+    results = char_reader.readtext(gray)
     detections = []
-    for box in results.boxes:
-        x1 = float(box.xyxy[0][0])
-        conf = float(box.conf[0])
-        cls = int(box.cls[0])
-        label = char_model.names[cls]
-        detections.append((x1, label, conf))
+    for bbox, text, conf in results:
+        if conf > 0.25:
+            x1 = bbox[0][0]
+            detections.append((x1, text, conf))
     detections.sort(key=lambda x: x[0])
-    plate_text = "".join(char for _, char, conf in detections if conf > 0.25)
+    plate_text = "".join(text for _, text, conf in detections if conf > 0.25)
     return plate_text
 
 

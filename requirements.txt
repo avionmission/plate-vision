@@ -3,3 +3,4 @@ opencv_python
 Pillow
 streamlit
 ultralytics
+easyocr
