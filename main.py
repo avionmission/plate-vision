@@ -374,7 +374,7 @@ with tab2:
         conf_threshold = st.slider("Min plate confidence", 0.1, 1.0, 0.4, 0.05)
     with col_ctl3:
         dedup_seconds = st.slider(
-            "Dedup window (s)",
+            "Detection Interval window(s)",
             0,
             10,
             3,
